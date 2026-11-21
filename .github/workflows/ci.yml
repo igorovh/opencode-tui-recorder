@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # The release workflow opens its PR with GITHUB_TOKEN, which starts no workflows.
+  workflow_dispatch:
+
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    # Read-only: this job runs the branch's code, so it must not be able to post statuses.
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun test
+
+  # Records the plain OpenCode TUI on Linux, with Chromium where tidy's setup puts it.
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      OPENCODE_VERSION: 2.3.2
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+      - run: |
+          npm install --global "@opencode/cli@$OPENCODE_VERSION"
+          sudo curl -fsSL -o /usr/local/bin/ttyd https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.x86_64
+          echo "8a217c968aba172e0dbf3f34447218dc015bc4d5e59bf51db2f2cd12b7be4f55  /usr/local/bin/ttyd" | sha256sum --check --quiet
+          sudo chmod +x /usr/local/bin/ttyd
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg > /dev/null
+          bun install --frozen-lockfile
+          sudo PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright bunx playwright install --with-deps chromium
+      - name: record passes, fails a check with 1 and breaks with 2
+        working-directory: example
+        run: |
+          bun ../src/cli.ts record --out demo.gif --step "type hello" --step "expect hello"
+          set +e
+          bun ../src/cli.ts record --out failed.gif --step "expect nowhere to be seen"; failed=$?
+          bun ../src/cli.ts record --out broken.gif --step "teleport home"; broken=$?
+          set -e
+          echo "failed check: $failed, unknown step: $broken"
+          test "$failed" = 1 && test "$broken" = 2 && test -s demo.gif && test -s failed.gif
+      - name: tui steps one at a time
+        working-directory: example
+        run: |
+          bun ../src/cli.ts tui serve & sleep 2
+          bun ../src/cli.ts tui begin
+          bun ../src/cli.ts tui rec-start
+          bun ../src/cli.ts tui type hello
+          bun ../src/cli.ts tui expect hello
+          set +e; bun ../src/cli.ts tui expect nowhere; test $? = 1 || exit 1; set -e
+          bun ../src/cli.ts tui rec-stop --out tui.gif
+          test -s tui.gif
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: demo
+          path: example/*.gif
+
+  # Dispatched runs are not attached to a PR, so mirror the result as the statuses the ruleset requires.
+  # A separate job that runs no repository code, so a test cannot fake them.
+  report:
+    needs: [check, record]
+    if: always() && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          STATE: ${{ needs.check.result == 'success' && needs.record.result == 'success' && 'success' || 'failure' }}
+          URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          for context in "check (ubuntu-latest)" "check (macos-latest)" "check (windows-latest)" record; do
+            gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+              -f state="$STATE" -f context="$context" -f target_url="$URL"
+          done

@@ -1,0 +1,49 @@
+{
+  "name": "opencode-tui-recorder",
+  "version": "0.1.0",
+  "description": "Records the real OpenCode TUI with your plugin to a GIF, in one command or step by step, for demos and before/after reviews",
+  "type": "module",
+  "license": "MIT",
+  "author": "igorovh",
+  "homepage": "https://github.com/igorovh/opencode-tui-recorder#readme",
+  "bugs": {
+    "url": "https://github.com/igorovh/opencode-tui-recorder/issues"
+  },
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/igorovh/opencode-tui-recorder.git"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "tui",
+    "gif",
+    "demo",
+    "playwright",
+    "ttyd"
+  ],
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "bin": {
+    "opencode-tui-recorder": "src/cli.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "playwright": "^1.65.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.0",
+    "@types/node": "^26.0.0",
+    "typescript": "^7.0.0"
+  }
+}
