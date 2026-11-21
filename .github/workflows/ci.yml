@@ -40,13 +40,14 @@ jobs:
           persist-credentials: false
       - uses: oven-sh/setup-bun@v2
       - run: |
-          npm install --global "@opencode/cli@$OPENCODE_VERSION"
+          # The postinstall puts the platform binary in place.
+          npm install --global --allow-scripts=@opencode/cli "@opencode/cli@$OPENCODE_VERSION"
           sudo curl -fsSL -o /usr/local/bin/ttyd https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.x86_64
           echo "8a217c968aba172e0dbf3f34447218dc015bc4d5e59bf51db2f2cd12b7be4f55  /usr/local/bin/ttyd" | sha256sum --check --quiet
           sudo chmod +x /usr/local/bin/ttyd
           sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg > /dev/null
           bun install --frozen-lockfile
-          sudo PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright bunx playwright install --with-deps chromium
+          sudo env "PATH=$PATH" PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright bunx playwright install --with-deps chromium
       - name: record passes, fails a check with 1 and breaks with 2
         working-directory: example
         run: |
