@@ -10,7 +10,7 @@ Chromium, and records the page with Playwright.
 ## Install
 
 ```sh
-bun add -d github:igorovh/opencode-tui-recorder#v0.1.0
+bun add -d github:igorovh/opencode-tui-recorder#v0.1.1
 ```
 
 It needs `opencode` (or `OPENCODE_BIN`), `ttyd` (or `TTYD_BIN`), `ffmpeg` and Playwright's Chromium.
