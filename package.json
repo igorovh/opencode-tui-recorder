@@ -1,6 +1,6 @@
 {
   "name": "opencode-tui-recorder",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Records the real OpenCode TUI with your plugin to a GIF, in one command or step by step, for demos and before/after reviews",
   "type": "module",
   "license": "MIT",
